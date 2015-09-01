@@ -39,7 +39,7 @@ Modarchive Jukebox can be used with one of the following options:
                       libmikmod to decode files  
            audacious  This is an X11 player. Uses modplug tu decode files
            opencp     This is Open Cubic Player, a console/x11 classic player. 
-                      It's really buggy but, who cares?
+                      It is really buggy but, who cares?
          
    -s <section> Play from selected section: Can be one of this 
           uploads     This is a list of the recent member upload activity
