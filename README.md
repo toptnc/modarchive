@@ -14,10 +14,16 @@ This script requires various tools to work.
 This script uses mikmod to play tunes by default, but you can override this and other settings with a .modarchiverc file located in $HOME directory. This is an example of .modarchiverc file to use audacious instead mikmod.
 
 ```bash
+#Where the song files will be downloaded
 MODPATH='/home/user/Music/modarchive'
 
+#The full path to player binary
 PLAYER='/usr/bin/audacious'
+
+#Player options. In this case, queue songs to audacious playlist
 PLAYEROPTS='-e'
+
+#If this is true, player will be run in background
 PLAYERBG='true'
 ```
 
