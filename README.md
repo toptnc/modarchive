@@ -1,5 +1,5 @@
 # modarchive
-Small Bash script to retrieve a play tunes from modarchive.org<br/>
+Small Bash script to retrieve and play tunes from modarchive.org<br/>
 This script is released under the terms of GNU GPL V3 License 
 
 # Requirements
