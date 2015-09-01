@@ -1,9 +1,14 @@
 # modarchive
 Small Bash script to retrieve a play tunes from modarchive.org<br/>
-This script plays tunes from http://modarchive.org in<br/>
-It can fetch files from various categories<br/>
-
 This script is released under the terms of GNU GPL V3 License 
+
+# Requirements
+This script requires various tools to work.
+* mikmod, opencp or audacious
+* wget
+* sed
+* grep
+* awk
 
 # Configuration
 This script uses mikmod to play tunes by default, but you can override this and other settings with a .modarchiverc file located in $HOME directory. This is an example of .modarchiverc file to use audacious instead mikmod.
