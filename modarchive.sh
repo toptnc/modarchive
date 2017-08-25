@@ -50,7 +50,6 @@ Modarchive Jukebox can be used with one of the following options:
                       It's really buggy but, who cares?
          
    -s <section> Play from selected section: Can be one of this 
-          uploads     This is a list of the recent member upload activity
           featured    These modules have been nominated by the crew for either 
                       outstanding quality, technique or creativity 
                       (or combination of).
@@ -59,7 +58,8 @@ Modarchive Jukebox can be used with one of the following options:
           downloads   The top 1000 most downloaded modules, recorded since circa
                       2002. 
           topscore    This chart lists the most revered modules on the archive.
-          new         Same than uploads but using search engine
+          newadd      New additions by Date
+	  newratings  Recent rated modules
           random      Ramdom module from entire archive
    -a <artist>  Search in artist database
    -m <module>  Search in module database (Title and Filename)
@@ -78,7 +78,7 @@ create_playlist()
     
     if [ -z $PAGES ];
     then
-        PLAYLIST=$(wget -o /dev/null -O - "${MODURL}" | grep href | sed 's/href=/\n/g' | sed 's/>/\n/g' | grep downloads.php | sed 's/\"//g' | sed 's/'\''//g'|cut -d " " -f 1| uniq)
+        PLAYLIST=$(curl -s "${MODURL}" | grep href | sed 's/href=/\n/g' | sed 's/>/\n/g' | grep downloads.php | sed 's/\"//g' | sed 's/'\''//g'|cut -d " " -f 1| uniq)
     else
 	echo "Need to download ${PAGES} pages of results. This may take a while..."
         for (( PLPAGE = 1; PLPAGE <= PAGES; PLPAGE ++ ))
@@ -86,7 +86,7 @@ create_playlist()
 	    (( PERCENT = PLPAGE * 100 / PAGES ))
 	    echo -ne "${PERCENT}% completed\r"
             PLPAGEARG="&page=$PLPAGE";
-            LIST=$(wget -o /dev/null -O - "${MODURL}${PLPAGEARG}"| grep href | sed 's/href=/\n/g' | sed 's/>/\n/g' | grep downloads.php | sed 's/\"//g' | sed 's/'\''//g'|cut -d " " -f 1| uniq )
+            LIST=$(curl -s "${MODURL}${PLPAGEARG}"| grep href | sed 's/href=/\n/g' | sed 's/>/\n/g' | grep downloads.php | sed 's/\"//g' | sed 's/'\''//g'|cut -d " " -f 1| uniq )
             PLAYLIST=$(printf "${PLAYLIST}\n${LIST}")
         done
 	echo ""
@@ -109,30 +109,30 @@ do
 	    ;;   
 	s)
             case $OPTARG in
-		uploads)
-		    MODURL="http://modarchive.org/index.php?request=view_actions_uploads"
-		    PAGES=
-		    ;;
 		featured)
     		    MODURL="http://modarchive.org/index.php?request=view_chart&query=featured"
-		    PAGES=$(wget  -o /dev/null -O - $MODURL | sed 's/[<>]/\n/g' | grep navlink | tail -n 1 | sed 's/page=/\n/' | tail -n 1 | cut -d "#" -f 1)
+		    PAGES=$(curl -s $MODURL | html2text | grep "Jump" | sed 's/\//\n/g' | tail -1 | cut -d "]" -f1)
 		    ;;		
 		favourites)
 		    MODURL="http://modarchive.org/index.php?request=view_top_favourites"
-		    PAGES=$(wget  -o /dev/null -O - $MODURL | sed 's/[<>]/\n/g' | grep navlink | tail -n 1 | sed 's/page=/\n/' | tail -n 1 | cut -d "#" -f 1)
+		    PAGES=$(curl -s $MODURL | html2text | grep "Jump" | sed 's/\//\n/g' | tail -1 | cut -d "]" -f1)
 		    ;;
 		downloads)
 		    MODURL="http://modarchive.org/index.php?request=view_chart&query=tophits"
-		    PAGES=$(wget  -o /dev/null -O - $MODURL | sed 's/[<>]/\n/g' | grep navlink | tail -n 1 | sed 's/page=/\n/' | tail -n 1 | cut -d "#" -f 1)
+		    PAGES=$(curl -s $MODURL | html2text | grep "Jump" | sed 's/\//\n/g' | tail -1 | cut -d "]" -f1)
 		    ;;
 		topscore)
 		    MODURL="http://modarchive.org/index.php?request=view_chart&query=topscore"
-		    PAGES=$(wget  -o /dev/null -O - $MODURL | sed 's/[<>]/\n/g' | grep navlink | tail -n 1 | sed 's/page=/\n/' | tail -n 1 | cut -d "#" -f 1)
+		    PAGES=$(curl -s $MODURL | html2text | grep "Jump" | sed 's/\//\n/g' | tail -1 | cut -d "]" -f1)
 		    ;;
-		new)
-                    MODURL="http://modarchive.org/index.php?request=search&search_type=new_additions"
-     		    PAGES=$(wget  -o /dev/null -O - $MODURL | sed 's/[<>]/\n/g' | grep navlink | tail -n 1 | sed 's/page=/\n/' | tail -n 1 | cut -d "#" -f 1)
+		newadd)
+                    MODURL="http://modarchive.org/index.php?request=view_actions_uploads"
+		    PAGES=
                     ;;
+		newratings)
+		    MODURL="http://modarchive.org/index.php?request=view_actions_ratings"
+		    PAGES=
+		    ;;
 		
 		random)
 		    RANDOMSONG="true"
@@ -147,13 +147,13 @@ do
             ;;
 	
 	a)
-            MODURL="http://modarchive.org/index.php?query=${OPTARG}&submit=Find&request=search&search_type=guessed_artist&order=5"
-	    PAGES=$(wget  -o /dev/null -O - $MODURL | sed 's/[<>]/\n/g' | grep navlink | tail -n 1 | sed 's/page=/\n/' | tail -n 1 | cut -d "#" -f 1)
+            MODURL="http://modarchive.org/index.php?query=${OPTARG}&submit=Find&request=search&search_type=search_artist"
+	    PAGES=$(curl -s $MODURL | html2text | grep "Jump" | sed 's/\//\n/g' | tail -1 | cut -d "]" -f1)
             ;;
 	
 	m) 
             MODURL="http://modarchive.org/index.php?request=search&query=${OPTARG}&submit=Find&search_type=filename_or_songtitle"               
-            PAGES=$(wget  -o /dev/null -O - $MODURL | sed 's/[<>]/\n/g' | grep navlink | tail -n 1 | sed 's/page=/\n/' | tail -n 1 | cut -d "#" -f 1)
+            PAGES=$(curl -s $MODURL | html2text | grep "Jump" | sed 's/\//\n/g' | tail -1 | cut -d "]" -f1)
             ;;
 	
 	r)
@@ -255,7 +255,7 @@ while [ $LOOP = "true" ]; do
 		    LOOP="false"
 	    fi
     else	
-	SONGURL=$(wget -o /dev/null -O - "$MODURL" | sed 's/href=\"/href=\"\n/g' | sed 's/\">/\n\">/g' | grep downloads.php | head -n 1);
+	SONGURL=$(curl -s "$MODURL" | sed 's/href=\"/href=\"\n/g' | sed 's/\">/\n\">/g' | grep downloads.php | head -n 1);
 	let COUNTER=$COUNTER+1
 	if [ $TRACKSNUM -gt 0 ] && [ $COUNTER -gt $TRACKSNUM ]; 
 	then
@@ -266,10 +266,11 @@ while [ $LOOP = "true" ]; do
     MODFILE=$(echo "$SONGURL" | cut -d "#" -f 2)
     if [ ! -e "${MODPATH}/${MODFILE}" ]; then
 	echo "Downloading $SONGURL to $MODPATH/$MODFILE";
-	wget -o /dev/null -O "${MODPATH}/${MODFILE}" "$SONGURL";
+	curl -s -o "${MODPATH}/${MODFILE}" "$SONGURL";
     fi
     if [ -e "${MODPATH}/${MODFILE}" ];then
-	$PLAYER $PLAYEROPTS "${MODPATH}/${MODFILE}"
+	echo "File ${MODPATH}/${MODFILE} already downloaded";
+	$PLAYER $PLAYEROPTS "${MODPATH}/${MODFILE}";
     fi
 done
 

@@ -51,7 +51,8 @@ Modarchive Jukebox can be used with one of the following options:
           downloads   The top 1000 most downloaded modules, recorded since circa
                       2002. 
           topscore    This chart lists the most revered modules on the archive.
-          new         Same than uploads but using search engine
+          newadd      New additions by Date
+	  newratings  Recent rated modules
           random      Ramdom module from entire archive
    -a <artist>  Search in artist database
    -m <module>  Search in module database (Title and Filename)
