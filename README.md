@@ -5,7 +5,8 @@ This script is released under the terms of GNU GPL V3 License
 # Requirements
 This script requires various tools to work.
 * mikmod, opencp or audacious
-* wget
+* curl
+* html2text
 * sed
 * grep
 * awk
