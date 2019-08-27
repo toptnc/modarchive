@@ -14,10 +14,13 @@
 #
 ###############################################################################
 
-MODPATH=/tmp/modarchive;
+MODPATH='/tmp/modarchive'
 SHUFFLE=
-PLAYLISTFILE=/tmp/modarchive.url
+PLAYLISTFILE='modarchive.url'
 RANDOMSONG=
+PAGES=
+MODLIST=
+PL_AGE="3600"
 
 PLAYER='/usr/bin/mikmod'
 PLAYEROPTS='-i -X --surround --hqmixer -f 48000 -X'
@@ -76,26 +79,33 @@ create_playlist()
 {
     PLAYLIST=""
     
-    if [ -z $PAGES ];
+    if [ ! -e "$MODPATH/$MODLIST" ] || [ "$(( $(date +"%s") - $(stat -c "%Y" "${MODPATH}/${MODLIST}") ))" -gt $PL_AGE ];
     then
-        PLAYLIST=$(curl -s "${MODURL}" | grep href | sed 's/href=/\n/g' | sed 's/>/\n/g' | grep downloads.php | sed 's/\"//g' | sed 's/'\''//g'|cut -d " " -f 1| uniq)
-    else
-	echo "Need to download ${PAGES} pages of results. This may take a while..."
-        for (( PLPAGE = 1; PLPAGE <= PAGES; PLPAGE ++ ))
-        do
-	    (( PERCENT = PLPAGE * 100 / PAGES ))
-	    echo -ne "${PERCENT}% completed\r"
-            PLPAGEARG="&page=$PLPAGE";
-            LIST=$(curl -s "${MODURL}${PLPAGEARG}"| grep href | sed 's/href=/\n/g' | sed 's/>/\n/g' | grep downloads.php | sed 's/\"//g' | sed 's/'\''//g'|cut -d " " -f 1| uniq )
-            PLAYLIST=$(printf "${PLAYLIST}\n${LIST}")
-        done
+	if [ ! -z $PAGES ];
+	then
+            PLAYLIST=$(curl -s "${MODURL}" | grep href | sed 's/href=/\n/g' | sed 's/>/\n/g' | grep downloads.php | sed 's/\"//g' | sed 's/'\''//g'|cut -d " " -f 1| uniq)
+	else
+	    PAGES=$(curl -s $MODURL | html2text | grep "Jump" | sed 's/\//\n/g' | tail -1 | cut -d "]" -f1)
+	    echo "Need to download ${PAGES} pages of results. This may take a while..."
+            for (( PLPAGE = 1; PLPAGE <= PAGES; PLPAGE ++ ))
+            do
+		(( PERCENT = PLPAGE * 100 / PAGES ))
+		echo -ne "${PERCENT}% completed\r"
+		PLPAGEARG="&page=$PLPAGE";
+		LIST=$(curl -s "${MODURL}${PLPAGEARG}"| grep href | sed 's/href=/\n/g' | sed 's/>/\n/g' | grep downloads.php | sed 's/\"//g' | sed 's/'\''//g'|cut -d " " -f 1| uniq )
+		PLAYLIST=$(printf "${PLAYLIST}\n${LIST}")
+            done
+	fi
 	echo ""
+	echo "$PLAYLIST" | sed '/^$/d' > "$MODPATH/$MODLIST"
     fi     
+
+    
     if [ -z $SHUFFLE ];
     then
-        echo "$PLAYLIST" | sed '/^$/d' > $PLAYLISTFILE
+        cat "$MODPATH/$MODLIST" > "$MODPATH/$PLAYLISTFILE"
     else
-        echo "$PLAYLIST" | sed '/^$/d' | awk 'BEGIN { srand() } { print rand() "\t" $0 }' | sort -n | cut -f2- > $PLAYLISTFILE
+        cat "$MODPATH/$MODLIST" | awk 'BEGIN { srand() } { print rand() "\t" $0 }' | sort -n | cut -f2- > "$MODPATH/$PLAYLISTFILE"
     fi
 }
 
@@ -111,49 +121,66 @@ do
             case $OPTARG in
 		featured)
     		    MODURL="http://modarchive.org/index.php?request=view_chart&query=featured"
-		    PAGES=$(curl -s $MODURL | html2text | grep "Jump" | sed 's/\//\n/g' | tail -1 | cut -d "]" -f1)
+		    MODLIST="list.featured"
+		    #PAGES=$(curl -s $MODURL | html2text | grep "Jump" | sed 's/\//\n/g' | tail -1 | cut -d "]" -f1)
 		    ;;		
 		favourites)
 		    MODURL="http://modarchive.org/index.php?request=view_top_favourites"
-		    PAGES=$(curl -s $MODURL | html2text | grep "Jump" | sed 's/\//\n/g' | tail -1 | cut -d "]" -f1)
+		    MODLIST="list.favourites"
+		    #PAGES=$(curl -s $MODURL | html2text | grep "Jump" | sed 's/\//\n/g' | tail -1 | cut -d "]" -f1)
 		    ;;
 		downloads)
 		    MODURL="http://modarchive.org/index.php?request=view_chart&query=tophits"
-		    PAGES=$(curl -s $MODURL | html2text | grep "Jump" | sed 's/\//\n/g' | tail -1 | cut -d "]" -f1)
+		    MODLIST="list.downloads"
+		    #PAGES=$(curl -s $MODURL | html2text | grep "Jump" | sed 's/\//\n/g' | tail -1 | cut -d "]" -f1)
 		    ;;
 		topscore)
 		    MODURL="http://modarchive.org/index.php?request=view_chart&query=topscore"
-		    PAGES=$(curl -s $MODURL | html2text | grep "Jump" | sed 's/\//\n/g' | tail -1 | cut -d "]" -f1)
+		    MODLIST="list.topscore"
+		    #PAGES=$(curl -s $MODURL | html2text | grep "Jump" | sed 's/\//\n/g' | tail -1 | cut -d "]" -f1)
 		    ;;
 		newadd)
                     MODURL="http://modarchive.org/index.php?request=view_actions_uploads"
-		    PAGES=
+		    MODLIST="list.newadd"
+		    PAGES='0'
                     ;;
 		newratings)
 		    MODURL="http://modarchive.org/index.php?request=view_actions_ratings"
-		    PAGES=
+		    MODLIST="list.newratings"
+		    PAGES='0'
 		    ;;
 		
 		random)
 		    RANDOMSONG="true"
 		    MODURL="http://modarchive.org/index.php?request=view_random"
-		    PAGES=
+		    PAGES='0'
 		    ;;
 		?)
-                    usage
-                    exit 1
-                    ;;
+                usage
+                exit 1
+                ;;
             esac
             ;;
 	
 	a)
-            MODURL="http://modarchive.org/index.php?query=${OPTARG}&submit=Find&request=search&search_type=search_artist"
-	    PAGES=$(curl -s $MODURL | html2text | grep "Jump" | sed 's/\//\n/g' | tail -1 | cut -d "]" -f1)
+	    QUERY=$(echo ${OPTARG} | sed 's/\ /\+/g')
+            QUERYURL="http://modarchive.org/index.php?query=$QUERY&submit=Find&request=search&search_type=search_artist"
+	    ARTISTNO=$(curl -s $QUERYURL | grep -A 10 "Search Results" | grep member.php | sed 's/>/>\n/g' | head -1 | cut -d "?" -f 2 | cut -d "\"" -f 1)
+	    if [ -z $ARTISTNO ];
+	    then
+		echo "The query returned no results"
+		exit 1
+	    fi
+	    
+	    MODURL="http://modarchive.org/index.php?request=view_artist_modules&query=${ARTISTNO}"
+	    MODLIST="artist.${OPTARG}"
+	    #PAGES=$(curl -s $MODURL | html2text | grep "Jump" | sed 's/\//\n/g' | tail -1 | cut -d "]" -f1)
             ;;
 	
 	m) 
-            MODURL="http://modarchive.org/index.php?request=search&query=${OPTARG}&submit=Find&search_type=filename_or_songtitle"               
-            PAGES=$(curl -s $MODURL | html2text | grep "Jump" | sed 's/\//\n/g' | tail -1 | cut -d "]" -f1)
+            MODURL="http://modarchive.org/index.php?request=search&query=${OPTARG}&submit=Find&search_type=filename_or_songtitle"
+	    MODLIST="search.${OPTARG}"
+            #PAGES=$(curl -s $MODURL | html2text | grep "Jump" | sed 's/\//\n/g' | tail -1 | cut -d "]" -f1)
             ;;
 	
 	r)
@@ -192,17 +219,17 @@ do
 		    ;;
 		
 		?)
-		    echo "ERROR: ${OPTARG} player is not supported."
-		    echo ""
-		    usage
-		    exit 1
-		    ;;
+		echo "ERROR: ${OPTARG} player is not supported."
+		echo ""
+		usage
+		exit 1
+		;;
 	    esac
 	    ;;
 	?)
-	    usage
-	    exit 1
-	    ;;
+	usage
+	exit 1
+	;;
     esac
 done
 
@@ -232,9 +259,10 @@ LOOP="true"
 
 if [ -z $RANDOMSONG ];
 then
-    echo "Creating playlist"	
+    echo "Creating playlist"
     create_playlist
-    TRACKSFOUND=$(wc -l ${PLAYLISTFILE} | cut -d " " -f 1)
+    
+    TRACKSFOUND=$(wc -l "$MODPATH/$PLAYLISTFILE" | cut -d " " -f 1)
     echo "Your query returned ${TRACKSFOUND} results"
 fi
 
@@ -242,18 +270,18 @@ COUNTER=1
 while [ $LOOP = "true" ]; do
     if [ -z $RANDOMSONG ];
     then
-	SONGURL=$(cat ${PLAYLISTFILE} | head -n ${COUNTER} | tail -n 1)
-	    let COUNTER=$COUNTER+1
-	    if [ $TRACKSNUM -gt 0 ]; 
+	SONGURL=$(cat "$MODPATH/$PLAYLISTFILE" | head -n ${COUNTER} | tail -n 1)
+	let COUNTER=$COUNTER+1
+	if [ $TRACKSNUM -gt 0 ]; 
+	then
+	    if [ $COUNTER -gt $TRACKSNUM ] || [ $COUNTER -gt $TRACKSFOUND ]; 
 	    then
-		if [ $COUNTER -gt $TRACKSNUM ] || [ $COUNTER -gt $TRACKSFOUND ]; 
-		then
-		    LOOP="false"
-		fi
-	    elif [ $COUNTER -gt $TRACKSFOUND ]; 
-	    then
-		    LOOP="false"
+		LOOP="false"
 	    fi
+	elif [ $COUNTER -gt $TRACKSFOUND ]; 
+	then
+	    LOOP="false"
+	fi
     else	
 	SONGURL=$(curl -s "$MODURL" | sed 's/href=\"/href=\"\n/g' | sed 's/\">/\n\">/g' | grep downloads.php | head -n 1);
 	let COUNTER=$COUNTER+1
@@ -269,7 +297,6 @@ while [ $LOOP = "true" ]; do
 	curl -s -o "${MODPATH}/${MODFILE}" "$SONGURL";
     fi
     if [ -e "${MODPATH}/${MODFILE}" ];then
-	echo "File ${MODPATH}/${MODFILE} already downloaded";
 	$PLAYER $PLAYEROPTS "${MODPATH}/${MODFILE}";
     fi
 done
