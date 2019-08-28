@@ -86,6 +86,7 @@ create_playlist()
             PLAYLIST=$(curl -s "${MODURL}" | grep href | sed 's/href=/\n/g' | sed 's/>/\n/g' | grep downloads.php | sed 's/\"//g' | sed 's/'\''//g'|cut -d " " -f 1| uniq)
 	else
 	    PAGES=$(curl -s $MODURL | html2text | grep "Jump" | sed 's/\//\n/g' | tail -1 | cut -d "]" -f1)
+	    [ -z $PAGES ] && PAGES=1
 	    echo "Need to download ${PAGES} pages of results. This may take a while..."
             for (( PLPAGE = 1; PLPAGE <= PAGES; PLPAGE ++ ))
             do
